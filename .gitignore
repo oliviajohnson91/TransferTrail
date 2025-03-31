@@ -1,0 +1,21 @@
+# Ignore environment files
+.env
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# VS Code settings
+.vscode/
+
+# macOS junk
+.DS_Store
+
+# CSV output directories
+scraped_courses/
