@@ -46,9 +46,9 @@ Transfer students often struggle to find consistent, centralized information abo
 
 ## 📂 Repository Structure
 TransferTrail/
-├── apexExport/f100        # APEX app export (SQL + readable YAML files)
-├── scrapers               # Python scripts for scraping Chico and Butte catalogs
-└── README.md              # Project overview and documentation
+- `apexExport/f100`: APEX app export (SQL + readable YAML files)
+- `scrapers`: Python scripts for scraping Chico and Butte catalogs
+- `README.md`: Project overview and documentation
 
 ---
 
