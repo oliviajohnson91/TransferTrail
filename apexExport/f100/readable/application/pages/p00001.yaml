@@ -1,0 +1,673 @@
+---
+# ====== Page: Home ==========================================
+id: 1
+identification: 
+  name: Home
+  alias: HOME
+  title: Transfer Trail
+
+appearance: 
+  page-mode: Normal
+  page-template: Theme Default
+  template-options: 
+  - '#DEFAULT#'
+
+navigation-menu: 
+  override-user-interface-level: false
+
+navigation: 
+  cursor-focus: Do not focus cursor
+  warn-on-unsaved-changes: true
+
+security: 
+  authentication: Page Requires Authentication
+  deep-linking: Application Default
+  page-access-protection: Arguments Must Have Checksum
+  form-auto-complete: Off
+  browser-cache: Application Default
+
+session-management: 
+  rejoin-sessions: Application Default
+
+advanced: 
+  enable-duplicate-page-submissions: Yes - Enable page to be re-posted
+  reload-on-submit: Only for Success
+
+server-cache: 
+  caching: Disabled
+
+regions: 
+- # ====== Region: Transfer Trail ==============================
+  id: 7959084837301833
+  identification: 
+    name: Transfer Trail
+    type: Static Content
+
+  layout: 
+    sequence: 10
+    parent-region: No Parent
+    slot: REGION_POSITION_01
+    start-new-layout: false
+    start-new-row: true
+    column: Automatic
+    new-column: true
+    column-span: Automatic
+
+  appearance: 
+    template: Hero
+    template-options: 
+    - '#DEFAULT#'
+    render-components: Above Content
+
+  accessibility: 
+    use-landmark: true
+    landmark-type: Template Default
+
+  image: 
+    file-url: '#APP_FILES#icons/app-icon-512.png'
+
+  advanced: 
+    region-display-selector: false
+    exclude-title-from-translation: false
+
+  customization: 
+    customizable: Not Customizable By End Users
+
+  attributes: 
+    settings: 
+      output-as: HTML
+      expand-shortcuts: false
+
+- # ====== Region: Catalog Requirements ========================
+  id: 7964072128299526
+  identification: 
+    name: Catalog Requirements
+    type: Dynamic Content
+
+  source: 
+    language: PL/SQL
+    pl/sql-function-body-returning-a-clob: |
+      DECLARE
+          v_html CLOB := '';
+      BEGIN
+          IF :P1_PROGRAM_ID IS NOT NULL THEN
+              -- === GE Requirements Section ===
+              v_html := v_html || '<h2 style="margin: 32px 0 16px 0; font-size: 1.5em;">General Education Requirements</h2>';
+              v_html := v_html || '<table style="width: 100%; border-collapse: collapse; margin-bottom: 32px; font-family: system-ui, sans-serif; font-size: 14px;">';
+              v_html := v_html || '<thead><tr style="border-bottom: 2px solid #ccc;">' ||
+                                 '<th style="width: 30px;"></th>' ||
+                                 '<th style="text-align: left; padding: 4px 8px;">GE Area</th>' ||
+                                 '<th style="text-align: left; padding: 4px 8px;">Requirement Name</th>' ||
+                                 '<th style="text-align: left; padding: 4px 8px;">Status</th>' ||
+                                 '</tr></thead><tbody>';
+      
+              FOR ge IN (
+                  SELECT gr.ID,
+                         gr.GE_CODE,
+                         gr.NAME,
+                         CASE
+                             WHEN EXISTS (
+                                 SELECT 1 
+                                 FROM GE_EXCEPTIONS e 
+                                 WHERE e.PROGRAM_ID = :P1_PROGRAM_ID 
+                                   AND e.GE_REQUIREMENT_ID = gr.ID 
+                                   AND e.EXCEPTION_TYPE = 'Waived'
+                             ) THEN 'Waived'
+                             WHEN EXISTS (
+                                 SELECT 1 
+                                 FROM GE_EXCEPTIONS e 
+                                 WHERE e.PROGRAM_ID = :P1_PROGRAM_ID 
+                                   AND e.GE_REQUIREMENT_ID = gr.ID 
+                                   AND e.EXCEPTION_TYPE = 'Substitution'
+                             ) THEN 
+                                 'Substituted by ' || (
+                                     SELECT LISTAGG(c.SUBJECT || ' ' || c.CATALOG_NUMBER, ', ') 
+                                     FROM GE_EXCEPTIONS e
+                                     JOIN COURSES c ON c.COURSE_ID = e.FULFILLED_BY_COURSE
+                                     WHERE e.PROGRAM_ID = :P1_PROGRAM_ID 
+                                       AND e.GE_REQUIREMENT_ID = gr.ID 
+                                       AND e.EXCEPTION_TYPE = 'Substitution'
+                                 )
+                             ELSE 'Required'
+                         END AS GE_STATUS,
+                         (SELECT COUNT(*)
+                          FROM GE_COMPLETED gc
+                          WHERE gc.USER_ID = :APP_USER
+                            AND gc.GE_REQUIREMENT_ID = gr.ID) AS IS_DONE
+                  FROM GE_REQUIREMENTS gr
+                  ORDER BY gr.GE_CODE
+              )
+              LOOP
+                  v_html := v_html || '<tr style="border-bottom: 1px solid #eee;">';
+      
+                  v_html := v_html || '<td style="text-align: center;">' ||
+                                      '<input type="checkbox" class="ge-checkbox" value="' || ge.ID || '" data-ge="' || ge.GE_CODE || '"';
+                  IF ge.IS_DONE > 0 THEN
+                      v_html := v_html || ' checked';
+                  END IF;
+                  v_html := v_html || '></td>';
+      
+                  v_html := v_html || '<td style="padding: 4px 8px;"><strong>' || ge.GE_CODE || '</strong></td>';
+                  v_html := v_html || '<td style="padding: 4px 8px;">' || ge.NAME || '</td>';
+                  v_html := v_html || '<td style="padding: 4px 8px;">' || ge.GE_STATUS || '</td>';
+      
+                  v_html := v_html || '</tr>';
+              END LOOP;
+      
+              v_html := v_html || '</tbody></table>';
+      
+              -- === Program Requirements Section ===
+              FOR grp IN (
+                  SELECT prg.GROUP_ID,
+                         prg.NAME AS REQUIREMENT_GROUP_NAME,
+                         prg.DISPLAY_ORDER
+                  FROM PROGRAM_REQUIREMENT_GROUPS prg
+                  WHERE prg.PROGRAM_ID = :P1_PROGRAM_ID
+                    AND prg.DISPLAY_ORDER IS NOT NULL
+                  ORDER BY prg.DISPLAY_ORDER, prg.NAME
+              )
+              LOOP
+                  v_html := v_html || '<h2 style="margin: 32px 0 16px 0; font-size: 1.5em;">' || grp.REQUIREMENT_GROUP_NAME || '</h2>';
+                  v_html := v_html || '<table style="width: 100%; border-collapse: collapse; margin-bottom: 32px; font-family: system-ui, sans-serif; font-size: 14px;">';
+                  v_html := v_html || '<thead><tr style="border-bottom: 2px solid #ccc;">' ||
+                                     '<th style="width: 30px;"></th>' ||
+                                     '<th style="text-align: left; padding: 4px 8px;">Course</th>' ||
+                                     '<th style="text-align: left; padding: 4px 8px;">Title</th>' ||
+                                     '<th style="text-align: left; padding: 4px 8px;">Units</th>' ||
+                                     '</tr></thead><tbody>';
+      
+                  -- Courses (only in lowest DISPLAY_ORDER group)
+                  FOR crs IN (
+                      SELECT 
+                          MIN(pcwd.COURSE_ID) AS COURSE_ID,
+                          pcwd.CATALOG_NUMBER,
+                          pcwd.COURSE_TITLE,
+                          pcwd.MIN_UNITS,
+                          pcwd.MAX_UNITS,
+                          LISTAGG(pcwd.SUBJECT, '/') WITHIN GROUP (ORDER BY pcwd.SUBJECT) AS COMBINED_SUBJECT,
+                          (
+                              SELECT COUNT(*) 
+                              FROM COURSES_COMPLETED cc
+                              WHERE cc.COURSE_ID IN (
+                                  SELECT COURSE_ID
+                                  FROM PROGRAM_COURSES_WITH_DETAILS pcwd2
+                                  WHERE pcwd2.PROGRAM_ID = :P1_PROGRAM_ID
+                                    AND pcwd2.GROUP_ID = grp.GROUP_ID
+                                    AND pcwd2.CATALOG_NUMBER = pcwd.CATALOG_NUMBER
+                              )
+                              AND cc.USER_ID = :APP_USER
+                          ) AS IS_DONE
+                      FROM PROGRAM_COURSES_WITH_DETAILS pcwd
+                      JOIN PROGRAM_REQUIREMENT_GROUPS prg ON pcwd.GROUP_ID = prg.GROUP_ID
+                      WHERE pcwd.PROGRAM_ID = :P1_PROGRAM_ID
+                        AND pcwd.GROUP_ID = grp.GROUP_ID
+                        AND pcwd.CATALOG_NUMBER IS NOT NULL
+                        AND prg.DISPLAY_ORDER = (
+                            SELECT MIN(prg2.DISPLAY_ORDER)
+                            FROM PROGRAM_COURSES_WITH_DETAILS pcwd2
+                            JOIN PROGRAM_REQUIREMENT_GROUPS prg2 ON pcwd2.GROUP_ID = prg2.GROUP_ID
+                            WHERE pcwd2.PROGRAM_ID = :P1_PROGRAM_ID
+                              AND pcwd2.CATALOG_NUMBER = pcwd.CATALOG_NUMBER
+                              AND prg2.DISPLAY_ORDER IS NOT NULL
+                        )
+                      GROUP BY 
+                          pcwd.CATALOG_NUMBER,
+                          pcwd.COURSE_TITLE,
+                          pcwd.MIN_UNITS,
+                          pcwd.MAX_UNITS
+                      ORDER BY 
+                          CASE 
+                              WHEN REGEXP_LIKE(pcwd.CATALOG_NUMBER, '^\d+$') THEN TO_NUMBER(pcwd.CATALOG_NUMBER)
+                              ELSE NULL
+                          END,
+                          pcwd.CATALOG_NUMBER
+                  )
+                  LOOP
+                      v_html := v_html || '<tr style="border-bottom: 1px solid #eee;">';
+      
+                      v_html := v_html || '<td style="text-align: center;">' ||
+                                         '<input type="checkbox" class="course-checkbox" name="completed" value="' || crs.COURSE_ID || '" data-course="' || crs.CATALOG_NUMBER || '"';
+                      IF crs.IS_DONE > 0 THEN
+                          v_html := v_html || ' checked';
+                      END IF;
+                      v_html := v_html || '></td>';
+      
+                      v_html := v_html || '<td style="padding: 4px 8px;"><strong>' || crs.COMBINED_SUBJECT || ' ' || crs.CATALOG_NUMBER || '</strong></td>';
+                      v_html := v_html || '<td style="padding: 4px 8px;">' || crs.COURSE_TITLE || '</td>';
+                      v_html := v_html || '<td style="padding: 4px 8px;">';
+                      IF crs.MIN_UNITS = crs.MAX_UNITS THEN
+                          v_html := v_html || TO_CHAR(crs.MIN_UNITS);
+                      ELSE
+                          v_html := v_html || TO_CHAR(crs.MIN_UNITS) || '–' || TO_CHAR(crs.MAX_UNITS);
+                      END IF;
+                      v_html := v_html || '</td></tr>';
+                  END LOOP;
+      
+                  -- Custom notes (always included)
+                  FOR note_row IN (
+                      SELECT DISTINCT CUSTOM_TEXT
+                      FROM PROGRAM_COURSES_WITH_DETAILS
+                      WHERE PROGRAM_ID = :P1_PROGRAM_ID
+                        AND GROUP_ID = grp.GROUP_ID
+                        AND CUSTOM_TEXT IS NOT NULL
+                  )
+                  LOOP
+                      v_html := v_html || '<tr><td></td><td colspan="3" style="padding: 6px 8px; font-style: italic; color: #444;">' || note_row.CUSTOM_TEXT || '</td></tr>';
+                  END LOOP;
+      
+                  v_html := v_html || '</tbody></table>';
+              END LOOP;
+      
+          ELSE
+              v_html := v_html || '<p style="font-size: 1.1em; color: #777; margin-top: 24px;">Please select a program to view General Education and Program Requirements.</p>';
+          END IF;
+      
+          RETURN v_html;
+      END;
+
+  layout: 
+    sequence: 40
+    parent-region: No Parent
+    slot: BODY
+    start-new-layout: false
+    start-new-row: true
+    column: Automatic
+    new-column: true
+    column-span: Automatic
+
+  appearance: 
+    template: Standard
+    template-options: 
+    - '#DEFAULT#'
+    - t-Region--scrollBody
+    render-components: Above Content
+
+  accessibility: 
+    use-landmark: true
+    landmark-type: Template Default
+
+  advanced: 
+    region-display-selector: false
+    exclude-title-from-translation: false
+
+  server-cache: 
+    caching: Disabled
+
+  customization: 
+    customizable: Not Customizable By End Users
+
+  attributes: 
+    performance: 
+      lazy-loading: false
+
+page-items: 
+- # ====== Page Item: P1_PROGRAM_ID ============================
+  id: 7961955463299505
+  identification: 
+    name: P1_PROGRAM_ID
+    type: Select List
+
+  label: 
+    label: Program
+    alignment: Left
+
+  settings: 
+    page-action-on-selection: Submit Page
+    execute-validations: true
+
+  multiple-values: 
+    type: No
+
+  layout: 
+    sequence: 10
+    region: Transfer Trail # 7959084837301833
+    slot: BODY
+    alignment: Left
+    start-new-layout: false
+    start-new-row: true
+    column: Automatic
+    new-column: true
+    column-span: Automatic
+    label-column-span: Page Template Default
+
+  appearance: 
+    template: Optional - Floating
+    template-options: 
+    - '#DEFAULT#'
+    height: 1
+
+  validation: 
+    value-required: false
+
+  list-of-values: 
+    type: SQL Query
+    sql-query: |
+      SELECT NAME || ' (' || CATALOG_YEAR || ')' AS display, PROGRAM_ID AS return_value
+      FROM PROGRAMS
+      ORDER BY NAME
+    display-extra-values: true
+    display-null-value: true
+
+  advanced: 
+    warn-on-unsaved-changes: Page Default
+
+  source: 
+    type: Null
+    used: Only when current value in session state is null
+
+  session-state: 
+    storage: Per Session (Persistent)
+
+  quick-picks: 
+    show-quick-picks: false
+
+  security: 
+    session-state-protection: Unrestricted
+    store-value-encrypted-in-session-state: true
+    restricted-characters: All characters can be saved.
+
+- # ====== Page Item: P1_SELECTED_COURSE_ID ====================
+  id: 9757347231520428
+  identification: 
+    name: P1_SELECTED_COURSE_ID
+    type: Hidden
+
+  settings: 
+    value-protected: false
+
+  layout: 
+    sequence: 10
+    region: Catalog Requirements # 7964072128299526
+    slot: BODY
+
+  advanced: 
+    warn-on-unsaved-changes: Page Default
+
+  source: 
+    type: Null
+    used: Always, replacing any existing value in session state
+
+  session-state: 
+    data-type: VARCHAR2
+    storage: Per Session (Persistent)
+
+  security: 
+    session-state-protection: Unrestricted
+    store-value-encrypted-in-session-state: true
+    restricted-characters: All characters can be saved.
+
+- # ====== Page Item: P1_IS_CHECKED ============================
+  id: 9757698274520431
+  identification: 
+    name: P1_IS_CHECKED
+    type: Hidden
+
+  settings: 
+    value-protected: false
+
+  layout: 
+    sequence: 20
+    region: Catalog Requirements # 7964072128299526
+    slot: BODY
+
+  advanced: 
+    warn-on-unsaved-changes: Page Default
+
+  source: 
+    type: Null
+    used: Always, replacing any existing value in session state
+
+  session-state: 
+    data-type: VARCHAR2
+    storage: Per Session (Persistent)
+
+  security: 
+    session-state-protection: Unrestricted
+    store-value-encrypted-in-session-state: true
+    restricted-characters: All characters can be saved.
+
+- # ====== Page Item: P1_COURSE_TRIGGER ========================
+  id: 9758238848520437
+  identification: 
+    name: P1_COURSE_TRIGGER
+    type: Hidden
+
+  settings: 
+    value-protected: false
+
+  layout: 
+    sequence: 30
+    region: Catalog Requirements # 7964072128299526
+    slot: BODY
+
+  advanced: 
+    warn-on-unsaved-changes: Page Default
+
+  source: 
+    type: Null
+    used: Only when current value in session state is null
+
+  session-state: 
+    data-type: VARCHAR2
+    storage: Per Session (Persistent)
+
+  security: 
+    session-state-protection: Unrestricted
+    store-value-encrypted-in-session-state: true
+    restricted-characters: All characters can be saved.
+
+dynamic-actions: 
+- # ====== Dynamic Action: Checkboxes ==========================
+  id: 9754752802520402
+  identification: 
+    name: Checkboxes
+
+  execution: 
+    sequence: 10
+    event-scope: Dynamic
+    type: Immediate
+
+  when: 
+    event: Click
+    selection-type: jQuery Selector
+    jquery-selector: .course-checkbox
+
+  client-side-condition: 
+    type: JavaScript expression
+    javascript-expression: this.triggeringElement.checked
+
+  actions: 
+  - # ====== Action: Execute JavaScript Code =====================
+    id: 9755190924520406
+    identification: 
+      action: Execute JavaScript Code
+
+    settings: 
+      code: |
+        if (this.browserEvent && this.browserEvent.target) {
+            var checkbox = this.browserEvent.target;
+            var courseId = checkbox.value;
+            var isChecked = checkbox.checked ? 'Y' : 'N';
+        
+            apex.item('P1_SELECTED_COURSE_ID').setValue(courseId);
+            apex.item('P1_IS_CHECKED').setValue(isChecked);
+        
+            console.log('Clicked:', courseId, 'Checked:', isChecked);
+        
+            // Force value change to trigger dynamic action on hidden item
+            var tempValue = isChecked === 'Y' ? 'N' : 'Y';
+            apex.item('P1_COURSE_TRIGGER').setValue(tempValue); // fake change
+            setTimeout(function () {
+                apex.item('P1_COURSE_TRIGGER').setValue(isChecked); // real value
+            }, 0);
+        }
+        
+
+    execution: 
+      sequence: 20
+      event: Checkboxes # 9754752802520402
+      fire-when-event-result-is: True
+      fire-on-initialization: false
+
+  - # ====== Action: Execute Server-side Code ====================
+    id: 9758669142520441
+    identification: 
+      action: Execute Server-side Code
+
+    settings: 
+      language: PE.PROPERTY.SOURCE_SNIPPET_LANG.LOV.PLSQL.D
+      pl/sql-code: |
+        BEGIN
+            INSERT INTO COURSES_COMPLETED (USER_ID, COURSE_ID)
+            SELECT :APP_USER, TO_NUMBER(:P1_SELECTED_COURSE_ID)
+            FROM DUAL
+            WHERE NOT EXISTS (
+                SELECT 1 FROM COURSES_COMPLETED
+                WHERE USER_ID = :APP_USER
+                  AND COURSE_ID = TO_NUMBER(:P1_SELECTED_COURSE_ID)
+            );
+        EXCEPTION
+            WHEN OTHERS THEN NULL;
+        END;
+        
+
+    execution: 
+      sequence: 40
+      event: Checkboxes # 9754752802520402
+      fire-when-event-result-is: True
+      fire-on-initialization: false
+      stop-execution-on-error: true
+      wait-for-result: true
+
+  - # ====== Action: Execute Server-side Code ====================
+    id: 9758753048520442
+    identification: 
+      action: Execute Server-side Code
+
+    settings: 
+      language: PE.PROPERTY.SOURCE_SNIPPET_LANG.LOV.PLSQL.D
+      pl/sql-code: |
+        BEGIN
+            DELETE FROM COURSES_COMPLETED
+            WHERE USER_ID = :APP_USER
+              AND COURSE_ID = TO_NUMBER(:P1_SELECTED_COURSE_ID);
+        END;
+
+    execution: 
+      sequence: 20
+      event: Checkboxes # 9754752802520402
+      fire-when-event-result-is: False
+      fire-on-initialization: false
+      stop-execution-on-error: true
+      wait-for-result: true
+
+  - # ====== Action: Execute JavaScript Code =====================
+    id: 9758806180520443
+    identification: 
+      action: Execute JavaScript Code
+
+    settings: 
+      code: |
+        if (this.browserEvent && this.browserEvent.target) {
+            var checkbox = this.browserEvent.target;
+            var courseId = checkbox.value;
+            var isChecked = checkbox.checked ? 'Y' : 'N';
+        
+            apex.item('P1_SELECTED_COURSE_ID').setValue(courseId);
+            apex.item('P1_IS_CHECKED').setValue(isChecked);
+        
+            console.log('Clicked:', courseId, 'Checked:', isChecked);
+        
+            // Force value change to trigger dynamic action on hidden item
+            var tempValue = isChecked === 'Y' ? 'N' : 'Y';
+            apex.item('P1_COURSE_TRIGGER').setValue(tempValue); // fake change
+            setTimeout(function () {
+                apex.item('P1_COURSE_TRIGGER').setValue(isChecked); // real value
+            }, 0);
+        }
+        
+
+    execution: 
+      sequence: 10
+      event: Checkboxes # 9754752802520402
+      fire-when-event-result-is: False
+      fire-on-initialization: false
+
+- # ====== Dynamic Action: Trigger Handler =====================
+  id: 9758342418520438
+  identification: 
+    name: Trigger Handler
+
+  execution: 
+    sequence: 20
+    event-scope: Static
+    type: Immediate
+
+  when: 
+    event: Change
+    selection-type: Item(s)
+    item(s): 
+    - P1_COURSE_TRIGGER
+
+  client-side-condition: 
+    type: Item = Value
+    item: P1_COURSE_TRIGGER
+    value: Y
+
+  actions: 
+  - # ====== Action: Show ========================================
+    id: 9758473496520439
+    identification: 
+      action: Show
+
+    affected-elements: 
+      selection-type: JavaScript Expression
+      javascript-expression: console.log('✅ Trigger flag change fired!');
+
+    execution: 
+      sequence: 10
+      event: Trigger Handler # 9758342418520438
+      fire-when-event-result-is: True
+      fire-on-initialization: true
+
+  - # ====== Action: Execute Server-side Code ====================
+    id: 9758598617520440
+    identification: 
+      action: Execute Server-side Code
+
+    settings: 
+      language: PE.PROPERTY.SOURCE_SNIPPET_LANG.LOV.PLSQL.D
+      pl/sql-code: |
+        BEGIN
+            IF :P1_IS_CHECKED = 'Y' THEN
+                BEGIN
+                    INSERT INTO COURSES_COMPLETED (USER_ID, COURSE_ID)
+                    SELECT :APP_USER, TO_NUMBER(:P1_SELECTED_COURSE_ID)
+                    FROM DUAL
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM COURSES_COMPLETED
+                        WHERE USER_ID = :APP_USER
+                          AND COURSE_ID = TO_NUMBER(:P1_SELECTED_COURSE_ID)
+                    );
+                EXCEPTION
+                    WHEN OTHERS THEN NULL;
+                END;
+            ELSIF :P1_IS_CHECKED = 'N' THEN
+                DELETE FROM COURSES_COMPLETED
+                WHERE USER_ID = :APP_USER
+                  AND COURSE_ID = TO_NUMBER(:P1_SELECTED_COURSE_ID);
+            END IF;
+        END;
+        
+      items-to-submit: 
+      - P1_IS_CHECKED
+      - P1_SELECTED_COURSE_ID
+
+    execution: 
+      sequence: 20
+      event: Trigger Handler # 9758342418520438
+      fire-when-event-result-is: True
+      fire-on-initialization: false
+      stop-execution-on-error: true
+      wait-for-result: true
+

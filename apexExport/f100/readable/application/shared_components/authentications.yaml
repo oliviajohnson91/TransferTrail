@@ -1,0 +1,73 @@
+---
+- # ====== Authentication: Oracle APEX Accounts ================
+  id: 7945687078301941
+  identification: 
+    name: Oracle APEX Accounts
+
+  subscription: 
+    version-number: 39431116826383
+
+  settings: 
+    type: Oracle APEX Accounts
+
+  session-not-valid: 
+    redirect-to: Login Page
+
+  login-processing: 
+    switch-in-session: false
+
+  real-application-security: 
+    ras-mode: Disabled
+
+- # ====== Authentication: Custom Login Auth ===================
+  id: 11195001351013869
+  identification: 
+    name: Custom Login Auth
+
+  subscription: 
+    version-number: 39431031623717
+
+  settings: 
+    type: Custom
+    authentication-function-name: 'custom_auth(:USERNAME, :PASSWORD)'
+    enable-legacy-authentication-attributes: false
+
+  session-not-valid: 
+    redirect-to: Login Page
+
+  login-processing: 
+    switch-in-session: false
+
+  real-application-security: 
+    ras-mode: Disabled
+
+- # ====== Authentication: Google Sign-In ======================
+  id: 11197837344390387
+  identification: 
+    name: Google Sign-In
+
+  subscription: 
+    version-number: 39431061317826
+
+  settings: 
+    type: Social Sign-In
+    credential-store: 11197648485397216
+    authentication-provider: OpenID Connect Provider
+    discovery-url: 'https://accounts.google.com/.well-known/openid-configuration'
+    scope: openid email profile
+    username: sub
+    convert-username-to-upper-case: false
+    verify-attributes: true
+
+  session-not-valid: 
+    redirect-to: Login Page
+
+  login-processing: 
+    switch-in-session: true
+
+  real-application-security: 
+    ras-mode: Disabled
+
+  help: 
+    help-text: You will be redirected to sign in with Google.
+

@@ -1,0 +1,63 @@
+---
+- # ====== Breadcrumb: Breadcrumb ==============================
+  id: 7945966333301938
+  identification: 
+    name: Breadcrumb
+
+  entries: 
+  - # ====== Entry: Home =========================================
+    id: 7946137208301938
+    identification: 
+      name: Home
+      page-number: 1
+
+    execution: 
+      sequence: 10
+
+    link: 
+      target: 
+        url: 'f?p=&APP_ID.:1:&APP_SESSION.::&DEBUG.:::'
+        page: 1 # Home
+
+  - # ====== Entry: Pathway ======================================
+    id: 7989652307789478
+    identification: 
+      name: Pathway
+      page-number: 5
+
+    execution: 
+      sequence: 10
+
+    link: 
+      target: 
+        url: 'f?p=&APP_ID.:5:&SESSION.::&DEBUG.:::'
+        page: 5 # Pathway
+
+  - # ====== Entry: Completed Courses ============================
+    id: 10943846563966340
+    identification: 
+      name: Completed Courses
+      page-number: 2
+
+    execution: 
+      sequence: 10
+
+    link: 
+      target: 
+        url: 'f?p=&APP_ID.:2:&APP_SESSION.::&DEBUG.:::'
+        page: 2 # Completed Courses
+
+  - # ====== Entry: Course Articulations =========================
+    id: 11143119419286599
+    identification: 
+      name: Course Articulations
+      page-number: 4
+
+    execution: 
+      sequence: 10
+
+    link: 
+      target: 
+        url: 'f?p=&APP_ID.:4:&APP_SESSION.::&DEBUG.:::'
+        page: 4 # Course Articulations
+
