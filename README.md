@@ -65,6 +65,5 @@ TransferTrail/
 
 **Olivia Johnson**  
 [LinkedIn](https://linkedin.com/in/oliviajohnson76)  
-📧 olivia@chicojohnsons.com
 
 ---
